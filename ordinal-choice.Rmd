@@ -26,7 +26,10 @@ Create your model here. `y` is your dependent (outcome) variable, which MUST be 
 To estimate the model, we use the `polr` command from the `MASS` library. Specify `method = "probit"` to indicate that you wish to use an ordered probit model. Ordered logit models are also possible, but _____.
 
 ```{r}
-model <- polr(as.ordered(y) ~ x1 + x2 + x3, method = "probit", data = data, Hess = T) # where y is the dependent variable; x1, x2, x3 are the independent variables (add as many as you want)
+model <- polr(as.ordered(y) ~ x1 + x2 + x3, 
+              method = "probit", 
+              data = data, 
+              Hess = T) # where y is the dependent variable; x1, x2, x3 are the independent variables (add as many as you want)
 # method = "probit" indicates that we want an ordered probit model; data is your data frame.
 ```
 
