@@ -1,0 +1,110 @@
+---
+title: "binom 2"
+author: "Pete Cuppernull"
+date: "1/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# maybe remove all of the below
+
+## Graphical Simulations
+
+First differences is useful when we want to observe the MLE estimates for two scenarios (i.e. two vectors of `x` values). What if we are interested in a range of values? While you could modify the code above to create lots of `x` vectors and write a function that processes all those vectors, that would be time consuming, error-prone, and not fun. Instead, we'll take advantage of two useful functions -- `expand.grid` and `map_dfr` -- to scale our code above to process as many vectors of `x` values as we want.
+
+### Model
+
+Our model stays the same. Nothing new to do here!
+
+### Set Simulation Values
+
+Here, we will use `expand.grid` to create our simulation values. `expand.grid` creates a table of all possible combinations of `x` values we specify. So, we can vary one independent variable of interest across a wider range of values while holding the other covariates at their means, and `expand.grid` will return a table of all possible values of results.
+
+```{r}
+x.expand <- expand.grid(1, # we add 1 here to account for the constant in the model
+             seq(min(data$x1, na.rm = TRUE), max(data$x1, na.rm = TRUE), by = 1),# set the range for x1. Here, x values will cover the minimum value in the data set to the maximum, taking steps of 1
+             mean(data$x2, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data$x3, na.rm = TRUE)) # for the other independent variables, we set them at their means
+```
+
+### Create Function for Simulations
+
+We now modify the simulation code from above to process one `x` vector instead of two. After this, our last step will be to iterate this new function over each row of `x` vectors we created above.
+
+```{r}
+binomial_range <- function(model, vector){
+  #Generate Betas -- this is where we draw values from the normal distribution from each simulation. mvrnorm (from the MASS package) draws values
+  #from the multivariate normal distribution. We use the coefficients from the original model and the variance-covariance matrix from the original model.
+  b.tilde <- mvrnorm(1000, coef(model), vcov(model))
+  
+  #inverse logit function - this is our link function used to generate the outcome variable.
+  inv.logit <- function (x) 1/(1+exp(-x))
+  
+  #Run Simulations -- now, we take the dot product of each of the 1,000 draws and the vector of values.
+  s <- inv.logit(b.tilde %*% vector)
+  
+  
+  #Extract Probabilities -- mean, SD, and interesting quantile values for the simulations above
+  p <- c(mean(s), sd(s), t(apply(s, 2, quantile, c(0.025, .5, .975))))
+  
+  #Create Table to Present Results
+  table <- as.data.frame(rbind(p)) %>%
+  round(3)
+    #create row names from the original arguments
+    rownames(table) <- c(deparse(substitute(vector)))
+    colnames(table) <- c("Mean", "SD", "2.5%", "50%", "97.5%")
+  
+  table
+}
+```
+
+
+Test
+```{r}
+library(foreign)
+data <- read.dta("/Users/petecuppernull/Documents/Houle_Dataset.dta")
+
+head(data)
+data_clean <- data %>%
+  dplyr::select(cowcode, cname, year, cold, lpolity, civprio, peaceyearssmallprio, success_pow, lethnic, mountains, lgdptreis, lgini, lshare1, riots) %>%
+  as.data.frame()
+
+model.q1.b <- glm(civprio ~ lshare1 + lpolity + peaceyearssmallprio + lethnic + lgdptreis, family = "binomial", data = data_clean)
+```
+
+Test expand
+```{r}
+x.expand <- expand.grid(1, # we add 1 here to account for the constant in the model
+             seq(min(data_clean$lshare1, na.rm = TRUE), max(data_clean$lshare1, na.rm = TRUE), by = 1),# set the range for x1. Here, x values will cover the minimum value in the data set to the maximum, taking steps of 1
+             mean(data_clean$lpolity, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data_clean$peaceyearssmallprio, na.rm = TRUE),
+             mean(data_clean$lethnic, na.rm = TRUE),
+             mean(data_clean$lgdptreis, na.rm = TRUE))
+
+
+binomial_range(model.q1.b, as.list(x.expand[1,]))
+
+as.list(as.matrix(x.expand))
+
+x.expand
+
+list <- split(x.expand, seq(nrow(x.expand)))
+
+unname(unlist(list[3]))
+```
+
+Map
+```{r}
+helper <- function(row){
+  x <- unname(unlist(row))
+  x
+}
+
+helper(x.expand[3,])
+map_dfr(x.expand, helper)
+```
+
+
