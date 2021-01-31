@@ -1,0 +1,95 @@
+---
+title: "Counts"
+author: "Pete Cuppernull"
+date: "1/21/2021"
+output: pdf_document
+---
+
+# Load Packages
+```{r setup, include=FALSE}
+library(tidyverse)
+library(MASS)
+```
+
+As the name suggests, we use count models when our dependent variable is a *count* of something. In effect, our dependent variable takes values of non-negative integers (0, 1, 2, 3...). You can imagine plenty of research scenarios where this is the case: the number of battle deaths in a conflict, the number of x, y.
+
+There are two main distributions for count models you'll tend to come across: poisson and negative binomial. Poisson models assume that the mean and variance of the distribution of the dependent variable are equal to each other. In most cases, this asssumption is not warranted and it is appropriate to use a negative binomial model. The code below assumes a negative binomial distribution -- if you want to check out tests for determining if the assumption of a poisson distribution is warranted, check out "dispersion tests".
+
+# Code
+
+## First Differences
+
+### Estimate Model - update
+
+Create your model here. `y` is your dependent variable, which MUST be a count variable (i.e. remember, non-negative integers only!). 
+
+To estimate the model, we use the `glm.nb` command from the `MASS` library. Specify to indicate that you wish to use an ordered probit model. Ordered logit models are also possible, but _____.
+
+```{r}
+model <- glm.nb(y ~ x1 + x2 + x3, data = data)
+ # where y is the dependent variable; x1, x2, x3 are the independent variables (add as many as you want)
+# data is your data frame.
+```
+
+### Set Simulation Values
+
+If you've gone through the code for other model types, the structure of our first differences calculations will be familiar to you. We begin by creating a few vectors of `X` values with which to run the maximum likelihood simulations. In effect, we plug in interesting values for each for the independent variables to observe the "most likely" dependent variables, per the specification of the model. One common way to do this is by varying one independent variable across a few substantively interesting values while holding all the other variable constant at their means in the data set. Below, I set three sets of `x` values.
+
+```{r}
+x.mean <- cbind(1,
+             mean(data$x1, na.rm = TRUE), 
+             mean(data$x2, na.rm = TRUE),
+             mean(data$x3, na.rm = TRUE))
+x.max <- cbind(1,
+             max(data$x1, na.rm = TRUE), 
+             mean(data$x2, na.rm = TRUE),
+             mean(data$x3, na.rm = TRUE))
+x.min <- cbind(1,
+             min(data$x1, na.rm = TRUE), 
+             mean(data$x2, na.rm = TRUE),
+             mean(data$x3, na.rm = TRUE))
+```
+
+When we vary `x1` and hold everything else constant, we can observe how to model predictions (i.e. the value of y) varies just by altering `x1`. We call these vectors **x**.mean, **x**.low and **x**.high because we are specifying values for our **x** values.
+
+### Create Function for Simulations
+
+Next, we create the function to run our simulations. For each set of `x` values above, this function will run 1,000 simulations. You might ask: why do we need to run multiple simulations for the same x values? We run multiple simulations because we also need to account for the variance in the model. Each `x` value we specified will be multiplied not by the coefficients (point estimates) from each `x` in the original model -- rather, they will be multiplied by a value drawn from a normal distribution with the mean set to the coefficient of the original model and variance of the `x` from the model.
+
+This function takes four arguments: the model we estimated and the three vectors of `x` values. If you want to run first differences across two or four or more `x` vectors, modify the number of *s*. arguments and *p*. arguments within the function.
+
+
+```{r}
+nb_fd <- function(model, x.mean, x.min, x.max){
+  #Generate betas
+  b.tilde <- MASS::mvrnorm(1000, coef(model), vcov(model))
+  
+  #run simulations
+  s.mean <- exp(b.tilde %*% x.mean)
+  s.min <- exp(b.tilde %*% x.min)
+  s.max <- exp(b.tilde %*% x.max)
+  
+  #extract quantiles for the probabilities
+  p.mean <- t(apply(s.mean, 2, quantile, c(0.025, .5, .975)))
+  p.min <- t(apply(s.min, 2, quantile, c(0.025, .5, .975)))
+  p.max <- t(apply(s.max, 2, quantile, c(0.025, .5, .975)))
+  
+  #create table
+  table <- as.data.frame(rbind(p.min, p.mean, p.max)) %>%
+  round(3)
+  
+  #create row names from the original arguments
+  rownames(table) <- c(deparse(substitute(x.min)), 
+                            deparse(substitute(x.mean)), 
+                            deparse(substitute(x.max)))
+  
+  table
+}
+```
+
+That's it! The table presents the maximum likelihood estimates for the count outcome for each vector of `x` values you created.
+
+## Visualization
+Coming soon (hopefully)!
+
+# Application
