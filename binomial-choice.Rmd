@@ -5,7 +5,6 @@ date: "1/4/2021"
 output: pdf_document
 ---
 
-# Load Packages
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(MASS)
@@ -78,13 +77,13 @@ binomial_fd(model, x.low, x.high)
 
 That's it! The table presents the maximum likelihood estimates for each vector of `x` values you created. The table also displays the 95% confidence interval for the estimates. You can imagine modifying this function to add more vectors of x values -- for each new vector, simply add a new argument, a new `s.` line that takes the new vector, a `p.` line for the new `s.` object, and a new line within the code creating `rownames(table)`.
 
-## Visualization
+# Visualization
 Coming soon (hopefully)!
 
-## Application
-Below, we have some survey data on affect towards Joe Biden. In addition to affect, we have each respondent's sex, age, education level, and binary indicators that indicate part afffiliation as democrat or republican.
+# Application
+Below, we have some survey data on affect towards Joe Biden. In addition to affect, we have each respondent's sex, age, education level, and binary indicators that indicate part affiliation as Democrat or Republican.
 
-Let's begin by loading in the data. We'll then create a binary `love_biden` variable, which take a value of 1 if affect towards biden is 80 or higher, and 0 otherwise.
+Let's begin by loading in the data. We then create a binary `love_biden` variable, which take a value of 1 if affect towards Biden is 80 or higher, and 0 otherwise.
 
 ###Load in Data
 ```{r}
@@ -96,7 +95,7 @@ biden <- biden %>%
 
 
 #### Model
-Next, we create out model, just like we wealked through above.
+Next, we create our model, just like we walked through above.
 ```{r}
 # model <- glm(y ~ x1 + x2 + x3, data = data, family = "binomial")
 
@@ -105,7 +104,7 @@ model <- glm(love_biden ~ female + age + educ + dem + rep, data = biden, family 
 
 #### Set Simulation Values
 
-Let's say we want to understand how education levels affect how likely a person is to "love Biden". I set two `X` vectors below for values of the independent variables. We set the `educ` variable as 12 and 16 in each respective vector, indicating high school and college completion (i.e. total number of years of schooling completed). All other variables are held at their means. With this setup, we can observe how the probability of "loving Biden" changes across each education level for the "average" individual in the data set.   
+Let's say we want to understand how education levels affect how likely a person is to "love Biden". I set two `x` vectors below for values of the independent variables. We set the `educ` variable as 12 and 16 in each respective vector, indicating high school and college completion (i.e. total number of years of schooling completed). All other variables are held at their means. With this setup, we can observe how the probability of "loving Biden" changes across each education level for the "average" individual in the data set.   
 ```{r}
 x.hs <- c(1,
             mean(biden$female, na.rm = TRUE),
@@ -155,5 +154,5 @@ x.rep <- c(1,
 ```{r}
 binomial_fd(model, x.dem, x.rep)
 ```
-Wow! Now that is a big effect. The "average" respondent in the data set who is a democrat has nearly 50% chance of "loving Biden". A Republican who otherwise has the same characteristics has only a tiny probability of "loving Biden". This is a more intuitive result.
+Wow! Now that is a big effect. The "average" respondent in the data set who is a democrat has nearly a 50% chance of "loving Biden". A Republican who otherwise has the same characteristics has only a tiny probability of "loving Biden". This is a more intuitive result.
 

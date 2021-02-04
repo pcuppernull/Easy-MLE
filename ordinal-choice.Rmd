@@ -53,7 +53,7 @@ When we vary `x1` and hold everything else constant, we can observe how to model
 
 Next, we create the function to run our simulations. For each set of `x` values above, this function will run 1,000 simulations. You might ask: why do we need to run multiple simulations for the same x values? We run multiple simulations because we also need to account for the variance in the model. Each `x` value we specified will be multiplied not by the coefficients (point estimates) from each `x` in the original model -- rather, they will be multiplied by a value drawn from a normal distribution with the mean set to the coefficient of the original model and variance of the `x` from the model.
 
-This function takes six arguments: the model we estimated, the three vectors of `x` values, a string of the category names (for example: liberal, moderate, or conservative), and a second string naming each `x` vector.
+This function takes six arguments: the model we estimated, the three vectors of `x` values, a string of the outcome category names (for example: liberal, moderate, conservative), and a second string naming each `x` vector.
 
 *Note: This function estimates the predicted probability of each outcome category for each vector of `x` values. As such, if your dependent variable `y` has four possible outcomes, you must add an extra section for "Outcome Category 4". Currently, this function is written for 1) a `y` variable with three possible outcomes, and 2) 3 `x` vectors with which we evaluate first differences.
 
@@ -101,9 +101,9 @@ x.names <- c("Min X", "Mean X", "Max X")
 oprob_fd(model, x.mean, x.max, x.min, categories, x.names)
 ```
 
-That's it! The table presents the maximum likelihood estimates for across outcome category for each vector of `x` values you created. Again, this function is written for a `y` dependent variable with three possible outcomes and three separate `x` vectors. Be sure to modify this accordingly for your own application.
+That's it! The table presents the maximum likelihood estimates for across outcome category for each vector of `x` values you created. Again, this function is written for a `y` dependent variable with three possible outcomes and three separate `x` vectors. Be sure to modify this accordingly for your own applications.
 
-## Visualization
+# Visualization
 Coming soon (hopefully)!
 
 # Application
