@@ -6,7 +6,7 @@ I cover models for: bivariate outcomes (logit), ordinal outcomes (ordered probit
 
   1. Brief overview of the model and use cases
   2. Pre-written functions to prepare data and estimate models, with in-line documentation
-  3. Example code with data from my own work
+  3. Example code with data from my own work (in progress for ordinal, multinomial, and counts)
 
 The only packages you'll need for this repository are `tidyverse`, `MASS`, and `nnet`.
 
