@@ -4,28 +4,25 @@ author: "Pete Cuppernull"
 date: "1/19/2021"
 output: pdf_document
 ---
-
-# Load Packages
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(nnet)
 ```
 
-Next, we turn to multinomial choice models. Much like binomial and ordinal models, multinomial models are defined by the nature of the dependent variable. In this case, the dependent variable is a choice between distinct outcomes that are *not* ordered in nature. For example, xxxx
+Next, we turn to multinomial choice models. Much like binomial and ordinal models, multinomial models are defined by the nature of the dependent variable. In this case, the dependent variable is a choice between distinct outcomes that are *not* ordered in nature. For example, what is someone's political party affiliation in a multiparty system? Do I choose to be a fan of the Buffalo Bills, the New York Giants, or the New England Patriots? Is my preferred social media platform Facebook, Instagram, Twitter, or TikTok? 
 
-There is some useful intuition behind these models to understand how they work. Multinomial models assume xyz
-
-Not sure if your dependent variable is ordinal or multinomial? Long (1995) recommends using a multinomial model. If you use a multinomial model on ordinal data, you'll lose efficiency (larger variance in your estimates), but your results will remain unbiased. But, if you use an ordinal model with a dependent variable that is truly multinomial, your estimates will be biased.
+Not sure if your dependent variable is ordinal or multinomial? Long (1997) recommends using a multinomial model. If you use a multinomial model on ordinal data, you'll lose efficiency (larger variance in your estimates), but your results will remain unbiased. But, if you use an ordinal model with a dependent variable that is truly multinomial, your estimates will be biased!
 
 # Code
 
-## First Differences
-
 ### Estimate Model
 
-Create your model here. `y` is your dependent (outcome) variable, which is the multinomial variable. In `R`, you want this to be a factor variable (use the base `R` command `as.factor()` to set this. 
+Create your model here. `y` is your dependent (outcome) variable, which is the multinomial variable. In `R`, you want this to be a factor variable (use the base `R` command `as.factor()` to set this). 
 
-To estimate the model, we use the `multinom` command from the `nnet` library. This function will specify a multinomial logit model.
+To estimate the model, we use the `multinom` command from the `nnet` library. This function will estimate a multinomial logit model. In order to use a multinomial logit model, we are assuming the *independence of irrelevant alternatives*: IIA assumes that the relative probability between two alternatives does not change when a third alternative is added. For example, if an election would be split 50/50 between only Democrats and Republicans, we assume that the introduction of a third party candidate would not upset the relative balance between Democrats and Republicans (if Green got 10% of the vote, the remaining 90% would be split 45/45 between Democrats and Republicans):
+
+  - You might imagine that this assumption is often violated in practice. To test the IIA assumption, conduct a Hausman-McFadden Test (code forthcoming at some point, hopefully...)
+  - If IIA is violated, we technically want to use a multinomial probit model. However, multinomial probit models are computationally expensive, and in many applications we might still move forward with estimating a multinomial logit model. But, any results in these scenarios should be interpreted with caution.
 
 ```{r}
 model <- multinom(y ~ x1 + x2 + x3,
@@ -42,30 +39,30 @@ This stage is virtually the same as the binomial and ordinal models. We are goin
 
 ```{r}
 x.mean <- cbind(1,
-             mean(data$x1, na.rm = TRUE), 
-             mean(data$x2, na.rm = TRUE),
-             mean(data$x3, na.rm = TRUE))
+             mean(data$x1, na.rm = TRUE), # this is the independent variable of interest. We start by setting this at its mean value in the data set
+             mean(data$x2, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data$x3, na.rm = TRUE)) # for the other independent variables, we set them at their means
 x.max <- cbind(1,
-             max(data$x1, na.rm = TRUE), 
-             mean(data$x2, na.rm = TRUE),
-             mean(data$x3, na.rm = TRUE))
+             max(data$x1, na.rm = TRUE), # now, we set x1 to its maximum value. 
+             mean(data$x2, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data$x3, na.rm = TRUE)) # for the other independent variables, we set them at their means
 x.min <- cbind(1,
-             min(data$x1, na.rm = TRUE), 
-             mean(data$x2, na.rm = TRUE),
-             mean(data$x3, na.rm = TRUE))
+             min(data$x1, na.rm = TRUE), # now, we set x1 to its minimum value. 
+             mean(data$x2, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data$x3, na.rm = TRUE)) # for the other independent variables, we set them at their means
 ```
 
-When we vary `x1` and hold everything else constant, we can observe how to model predictions (i.e. the value of y) varies just by altering `x1`. We call these vectors **x**.mean, **x**.low and **x**.high because we are specifying values for our **x** values.
+When we vary `x1` and hold everything else constant, we can observe how to model predictions (i.e. the value of y) vary just by altering `x1`. We call these vectors **x**.mean, **x**.low and **x**.high because we are specifying values for our **x** values.
 
 ### Create Function for Simulations
 
-Next, we create the function to run our simulations. For each set of `x` values above, this function will run 1,000 simulations. You might ask: why do we need to run multiple simulations for the same x values? We run multiple simulations because we also need to account for the variance in the model. Each `x` value we specified will be multiplied not by the coefficients (point estimates) from each `x` in the original model -- rather, they will be multiplied by a value drawn from a normal distribution with the mean set to the coefficient of the original model and variance of the `x` from the model.
+Next, we create the function to run our simulations. For each set of `x` values above, this function will run 1,000 simulations. You might ask: why do we need to run multiple simulations for the same `x` values? We run multiple simulations because we also need to account for the variance in the model. Each `x` value we specified will be multiplied not by the coefficients (point estimates) from each `x` in the original model -- rather, they will be multiplied by a value drawn from a normal distribution with the mean set to the coefficient of the original model and variance of the `x` from the model.
 
-This function only takes two arguments: the model and one of the vectors. To compare first differences, you would then want to run this function for each vector. This function **MUST BE MODIFIED** depending on the number of possible outcomes in your dependent variable. I present two versions of the function: the first for 3 choices, the second for 4. Depending on the number of choices, modify the following components of the function:
+This function only takes two arguments: the model and one of the vectors. To compare first differences, you want to run this function for each vector. This function **MUST BE MODIFIED** depending on the number of possible outcomes in your dependent variable. I present two versions of the function: the first for 3 choices, the second for 4. Depending on the number of choices, modify the following components of the function:
 
   1. `mu` in `B` object - notice that we repeat `coef(model)[1,]` and `coef(model)[2,]` for the function with three choices. Add one of these pieces of code for one less than the number of choices. For example, add `c(coef(model)[1,], coef(model)[2,], coef(model)[3,])` for 4 choices.
   2. `denom` - add an `exp` term for each choice option, following the format provided.
-  3. Create `choice` options - for three choices, we have `choice1`, `choice2`, and the `baseline` (which is choice 3). Each `choice` consists of each `exp()` term from the `denom` object, divided by the `denom` object. The `baseline` object always goes last and is calculated as 1 minus each `choice` object.
+  3. Create `choice` options - for three choices, we have `choice1`, `choice2`, and the `baseline` (which is choice 3). Each `choice` consists of an `exp()` term from the `denom` object, divided by the `denom` object. The `baseline` object always goes last and is calculated as 1 minus each `choice` object.
   4. `mean` and `sd` objects - add a `mean()` and `sd()` piece of code to correspond to the number of choices.
 
 #### Three Possible Outcomes
@@ -83,7 +80,7 @@ k <- dim(coef(model))[2]
 
 denom <- 1 + exp(B[,1:k] %*% x.vector) + exp(B[,(k+1):(2*k)] %*% x.vector)  #denominator of multinomial
 
-#Add in Numerators to generate Predicted Probabilties of landing in each choice outcome. This is what we care about!
+#Add in Numerators to generate Predicted Probabilities of landing in each choice outcome. This is what we care about!
 
 ##BE SURE TO EDIT FOR CORRECT NUMBER OF CHOICES
 choice1 <- exp(B[,1:k] %*% x.vector) / denom
@@ -96,7 +93,7 @@ sd <- rbind(sd(baseline), sd(choice1), sd(choice2))
 ci <- rbind(quantile(baseline, probs = c(.025, .5, .975)),
       quantile(choice1, probs = c(.025, .5, .975)),
       quantile(choice2, probs = c(.025, .5, .975)))
-     # quantile(choice3, probs = c(.025, .5, .975)))
+
 table <- cbind(mean, sd, ci)
 rownames(table) <- model$lev
 colnames(table) <- c("Mean", "SD", "2.5%", "50%", "97.5%")
@@ -139,7 +136,7 @@ sd <- rbind(sd(baseline), sd(choice1), sd(choice2), sd(choice3))
 ci <- rbind(quantile(baseline, probs = c(.025, .5, .975)),
       quantile(choice1, probs = c(.025, .5, .975)),
       quantile(choice2, probs = c(.025, .5, .975)))
-     # quantile(choice3, probs = c(.025, .5, .975)))
+
 table <- cbind(mean, sd, ci)
 rownames(table) <- model$lev
 colnames(table) <- c("Mean", "SD", "2.5%", "50%", "97.5%")
@@ -152,14 +149,10 @@ mlogit_fd4(model, x.min)
 mlogit_fd4(model, x.max)
 ```
 
+That's it! The table presents the maximum likelihood estimates for across outcome category for the vector of `x` values you created.
 
-
-
-
-
-That's it! The table presents the maximum likelihood estimates for across outcome category for each vector of `x` values you created. Again, this function is written foor a `y` dependent variable with three possible outcomes and three separate `x` vectors. Be sure to modify this accordingly for your own application.
-
-## Visualization
+# Visualization
 Coming soon (hopefully)!
 
 # Application
+Coming soon!
