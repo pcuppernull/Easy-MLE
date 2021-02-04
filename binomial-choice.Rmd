@@ -13,8 +13,6 @@ library(MASS)
 
 # Code
 
-## First Differences
-
 ### Estimate Model
 
 Create your model here. `y` is your dependent (outcome) variable, which should take values of 0 or 1. This is what we mean by *binomial choice* -- there are two possible outcomes. In the `glm` function (from base `R`), `family = "binomial"` indicates a logit model.
@@ -43,9 +41,9 @@ When we vary `x1` and hold everything else constant, we can observe how to model
 
 ### Create Function for Simulations
 
-Next, we create the function to run our simulations. For each set of `x` values above, this function will run 1,000 simulations. You might ask: why do we need to run multiple simulations for the same x values? We run multiple simulations because we also need to account for the variance in the model. Each `x` value we specified will be multiplied not by the coefficients (point estimates) from each `x` in the original model -- rather, they will be multiplied by a value drawn from a normal distribution with the mean set to the coefficient of the original model and variance of the `x` from the model.
+Next, we create the function to run our simulations. For each set of `x` values above, this function will run 1,000 simulations. You might ask: why do we need to run multiple simulations for the same `x` values? We run multiple simulations because we also need to account for the variance in the model. Each `x` value we specified will be multiplied not by the coefficients (point estimates) from each `x` in the original model -- rather, they will be multiplied by a value drawn from a normal distribution with the mean set to the coefficient of the original model and variance of the `x` from the model.
 
-Some of the terminology below is drawn from Wald and Alquist (2018). Don't worry too much about why we call them "beta", "b.tilde", etc. -- try to focus on the intuition of each step.
+Some of the terminology and code below is drawn from Wald and Alquist (2018). Don't worry too much about why we call them "beta", "b.tilde", etc. -- try to focus on the intuition of each step.
 ```{r}
 binomial_fd <- function(model, low_vector, high_vector){
   #Generate Betas -- this is where we draw values from the normal distribution from each simulation. mvrnorm (from the MASS package) draws values
@@ -83,4 +81,79 @@ That's it! The table presents the maximum likelihood estimates for each vector o
 ## Visualization
 Coming soon (hopefully)!
 
+## Application
+Below, we have some survey data on affect towards Joe Biden. In addition to affect, we have each respondent's sex, age, education level, and binary indicators that indicate part afffiliation as democrat or republican.
+
+Let's begin by loading in the data. We'll then create a binary `love_biden` variable, which take a value of 1 if affect towards biden is 80 or higher, and 0 otherwise.
+
+###Load in Data
+```{r}
+biden <- read_csv("/Users/petecuppernull/Dropbox/UChicago/2019-20/Winter/Computatonal Modeling/biden.csv")
+
+biden <- biden %>%
+  mutate(love_biden = if_else(biden >= 80, 1, 0))
+```
+
+
+#### Model
+Next, we create out model, just like we wealked through above.
+```{r}
+# model <- glm(y ~ x1 + x2 + x3, data = data, family = "binomial")
+
+model <- glm(love_biden ~ female + age + educ + dem + rep, data = biden, family = "binomial")
+```
+
+#### Set Simulation Values
+
+Let's say we want to understand how education levels affect how likely a person is to "love Biden". I set two `X` vectors below for values of the independent variables. We set the `educ` variable as 12 and 16 in each respective vector, indicating high school and college completion (i.e. total number of years of schooling completed). All other variables are held at their means. With this setup, we can observe how the probability of "loving Biden" changes across each education level for the "average" individual in the data set.   
+```{r}
+x.hs <- c(1,
+            mean(biden$female, na.rm = TRUE),
+            mean(biden$age, na.rm = TRUE),
+            12,
+            mean(biden$dem, na.rm = TRUE),
+            mean(biden$rep, na.rm = TRUE))
+
+x.college <- c(1,
+            mean(biden$female, na.rm = TRUE),
+            mean(biden$age, na.rm = TRUE),
+            16,
+            mean(biden$dem, na.rm = TRUE),
+            mean(biden$rep, na.rm = TRUE))
+```
+
+
+#### First Differences
+
+And now, we just plug the model and each vector into our function!
+
+```{r}
+binomial_fd(model, x.hs, x.college)
+```
+
+What do we find? Well, the mean probability of "loving Biden" is almost the same between the groups! Remember, this doesn't necessarily mean that education doesn't matter: it means that once we control for things like party affiliation, education levels don't have a very strong effect.
+
+What if we run first differences on party affiliation?
+
+#### Whhat about Party Affiliation?
+```{r}
+x.dem <- c(1,
+            mean(biden$female, na.rm = TRUE),
+            mean(biden$age, na.rm = TRUE),
+            mean(biden$educ, na.rm = TRUE),
+            1, #respondent is a democrat
+            0) # respondent is not a republican
+
+x.rep <- c(1,
+            mean(biden$female, na.rm = TRUE),
+            mean(biden$age, na.rm = TRUE),
+            mean(biden$educ, na.rm = TRUE),
+            0, #respondent is not a democrat
+            1) # respondent is a republican
+```
+
+```{r}
+binomial_fd(model, x.dem, x.rep)
+```
+Wow! Now that is a big effect. The "average" respondent in the data set who is a democrat has nearly 50% chance of "loving Biden". A Republican who otherwise has the same characteristics has only a tiny probability of "loving Biden". This is a more intuitive result.
 

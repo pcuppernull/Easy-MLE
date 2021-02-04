@@ -11,19 +11,17 @@ library(tidyverse)
 library(MASS)
 ```
 
-Ordinal models take a dependent variable which is ordered. For instance, is a voter liberal, moderate, or conservative? Is a country's internet Not Free, Partially Free, or Free? The assumption with these models is that the potential outcomes of the dependent variable can theoretically be represented on a single continuum. If you believe that a liberal voter must become moderate before they become conservative, ordinal models are a justifiable choice -- but, if you think a voter could jump from liberal to conservative without first becoming moderate, and thus their ideology is not so much a single continuum, it would be advisable to use a multinomial model (the next `rmd`). 
+Ordinal models take a dependent variable which is ordered. For instance, is a voter liberal, moderate, or conservative? Is a country's internet Not Free, Partially Free, or Free? The assumption with these models is that the potential outcomes of the dependent variable can theoretically be represented on a single continuum. If you believe that a liberal voter must become moderate before they become conservative, for example, an ordinal model is a justifiable choice -- but, if you think a voter could jump from liberal to conservative without first becoming moderate, and thus ideology is not a single continuum, it would be advisable to use a multinomial model (the next `rmd`). 
 
-Not sure if your dependent variable is ordinal or multinomial? Long (1995) recommends using a multinomial model. If you use a multinomial model on ordinal data, you'll lose efficiency (larger variance in your estimates), but your results will remain unbiased. But, if you use an ordinal model with a dependent variable that is truly multinomial, your estimates will be biased.
+Not sure if your dependent variable is ordinal or multinomial? Long (1997) recommends using a multinomial model. If you use a multinomial model on ordinal data, you'll lose efficiency (larger variance in your estimates), but your results will remain unbiased. But, if you use an ordinal model with a dependent variable that is truly multinomial, your estimates will be biased.
 
 # Code
-
-## First Differences
 
 ### Estimate Model
 
 Create your model here. `y` is your dependent (outcome) variable, which MUST be an ordered variable. Use the base `R` `as.ordered()` command to set this. It is possible you will need to reset the factor levels, so be sure to check that the possible outcomes are ordered as expected.
 
-To estimate the model, we use the `polr` command from the `MASS` library. Specify `method = "probit"` to indicate that you wish to use an ordered probit model. Ordered logit models are also possible, but _____.
+To estimate the model, we use the `polr` command from the `MASS` library. Specify `method = "probit"` to indicate that you wish to use an ordered probit model. Ordered logit models are also possible, but the results they will yield are extremely similar to ordered probit models in the vast majority of applications.
 
 ```{r}
 model <- polr(as.ordered(y) ~ x1 + x2 + x3, 
@@ -35,18 +33,18 @@ model <- polr(as.ordered(y) ~ x1 + x2 + x3,
 
 ### Set Simulation Values
 
-This stage is virtually the same as the binomial models. We are going to use the model we just estimated above to run maximum likelihood simulations. In effect, we plug in interesting values for each for the independent variables to observe the "most likely" dependent variables, per the specification of the model. One common way to do this is by varying one independent variable across a few substantively interesting values while holding all the other variable constant at their means in the data set. Below, I set three sets of `x` values.
+This stage is virtually the same as the binomial models. We are going to use the model we just estimated above to run maximum likelihood simulations. In effect, we plug in interesting values for each for the independent variables to observe the "most likely" value of the dependent variable, per the specification of the model. One common way to do this is by varying one independent variable across a few substantively interesting values while holding all the other variable constant at their means in the data set. Below, I set three sets of `x` values.
 
 ```{r}
-x.mean <- cbind(mean(data$x1, na.rm = TRUE), 
-             mean(data$x2, na.rm = TRUE),
-             mean(data$x3, na.rm = TRUE))
-x.max <- cbind(max(data$x1, na.rm = TRUE), 
-             mean(data$x2, na.rm = TRUE),
-             mean(data$x3, na.rm = TRUE))
-x.min <- cbind(min(data$x1, na.rm = TRUE), 
-             mean(data$x2, na.rm = TRUE),
-             mean(data$x3, na.rm = TRUE))
+x.mean <- cbind(mean(data$x1, na.rm = TRUE), # this is the independent variable of interest. We start by setting this at its mean value in the data set
+             mean(data$x2, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data$x3, na.rm = TRUE)) # for the other independent variables, we set them at their means
+x.max <- cbind(max(data$x1, na.rm = TRUE), # now, we set x1 to its maximum value. 
+             mean(data$x2, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data$x3, na.rm = TRUE)) # for the other independent variables, we set them at their means
+x.min <- cbind(min(data$x1, na.rm = TRUE), # now, we set x1 to its minimum value. 
+             mean(data$x2, na.rm = TRUE), # for the other independent variables, we set them at their means
+             mean(data$x3, na.rm = TRUE)) # for the other independent variables, we set them at their means
 ```
 
 When we vary `x1` and hold everything else constant, we can observe how to model predictions (i.e. the value of y) varies just by altering `x1`. We call these vectors **x**.mean, **x**.low and **x**.high because we are specifying values for our **x** values.
@@ -55,29 +53,29 @@ When we vary `x1` and hold everything else constant, we can observe how to model
 
 Next, we create the function to run our simulations. For each set of `x` values above, this function will run 1,000 simulations. You might ask: why do we need to run multiple simulations for the same x values? We run multiple simulations because we also need to account for the variance in the model. Each `x` value we specified will be multiplied not by the coefficients (point estimates) from each `x` in the original model -- rather, they will be multiplied by a value drawn from a normal distribution with the mean set to the coefficient of the original model and variance of the `x` from the model.
 
-This function takes six arguments: the model we estimated, the three vectors of `x` values, a string of the category names (for example: liberal, moderate, or conservative), and a second strings naming each `x` vector.
+This function takes six arguments: the model we estimated, the three vectors of `x` values, a string of the category names (for example: liberal, moderate, or conservative), and a second string naming each `x` vector.
 
-*Note: This function estimates the predicted probability that each `x` vector falls into each outcome category. As such, if your dependent variable `y` has four possible outcomes, you must add an extra section for "Outcome Category 4". Currently, this function is written for 1) a `y` variable with three possible outcomes, and 2) 3 `x` vectors on which to evalute first differences.
+*Note: This function estimates the predicted probability of each outcome category for each vector of `x` values. As such, if your dependent variable `y` has four possible outcomes, you must add an extra section for "Outcome Category 4". Currently, this function is written for 1) a `y` variable with three possible outcomes, and 2) 3 `x` vectors with which we evaluate first differences.
 
 ```{r}
 oprob_fd <- function(model, mean_vector, max_vector, min_vector, category_names, x_names){
+  #these first few lines run our simulations. Don't worry too much about what is going on here
   sims <- MASS::mvrnorm(1000, c(coef(model), model$zeta), solve(model$Hessian))
-
-beta_sim <- sims[,1:length(coef(model))]
-tau_sim <- sims[,(length(coef(model))+1):ncol(sims)]
+  beta_sim <- sims[,1:length(coef(model))]
+  tau_sim <- sims[,(length(coef(model))+1):ncol(sims)]
 
 # Predicted Probabilities
-# Outcome Category 1
+# Outcome Category 1 - probability of falling into Category 1 for each x vector
 probs_mean_cat1 <- pnorm(tau_sim[,1] - beta_sim %*% t(mean_vector))
 probs_min_cat1 <- pnorm(tau_sim[,1] - beta_sim %*% t(min_vector))
 probs_max_cat1 <- pnorm(tau_sim[,1] - beta_sim %*% t(max_vector))
 
-# Outcome Category 2
+# Outcome Category 2 - probability of falling into Category 2 for each x vector
 probs_mean_cat2 <- pnorm(tau_sim[,2] - beta_sim %*% t(mean_vector)) - pnorm(tau_sim[,1] - beta_sim %*% t(mean_vector))
 probs_min_cat2 <- pnorm(tau_sim[,2] - beta_sim %*% t(min_vector)) - pnorm(tau_sim[,1] - beta_sim %*% t(min_vector))
 probs_max_cat2 <- pnorm(tau_sim[,2] - beta_sim %*% t(max_vector)) - pnorm(tau_sim[,1] - beta_sim %*% t(max_vector))
 
-# Outcome Category 3
+# Outcome Category 3 - probability of falling into Category 3 for each x vector
 probs_mean_cat3 <- 1 - pnorm(tau_sim[,2] - beta_sim %*% t(mean_vector)) 
 probs_min_cat3 <- 1 - pnorm(tau_sim[,2] - beta_sim %*% t(min_vector)) 
 probs_max_cat3 <- 1 - pnorm(tau_sim[,2] - beta_sim %*% t(max_vector)) 
@@ -98,12 +96,12 @@ test_results
 
 #Create List of category and x names
 categories <- c("Cat 1", "Cat 2", "Cat 3")
-x.names <- c("Min GDP", "Mean GDP", "Max GDP")
+x.names <- c("Min X", "Mean X", "Max X")
 
 oprob_fd(model, x.mean, x.max, x.min, categories, x.names)
 ```
 
-That's it! The table presents the maximum likelihood estimates for across outcome category for each vector of `x` values you created. Again, this function is written foor a `y` dependent variable with three possible outcomes and three separate `x` vectors. Be sure to modify this accordingly for your own application.
+That's it! The table presents the maximum likelihood estimates for across outcome category for each vector of `x` values you created. Again, this function is written for a `y` dependent variable with three possible outcomes and three separate `x` vectors. Be sure to modify this accordingly for your own application.
 
 ## Visualization
 Coming soon (hopefully)!
