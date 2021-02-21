@@ -87,7 +87,7 @@ Let's begin by loading in the data. We then create a binary `love_biden` variabl
 
 ###Load in Data
 ```{r}
-biden <- read_csv("/Users/petecuppernull/Dropbox/UChicago/2019-20/Winter/Computatonal Modeling/biden.csv")
+biden <- read_csv("data/biden.csv")
 
 biden <- biden %>%
   mutate(love_biden = if_else(biden >= 80, 1, 0))
