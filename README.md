@@ -1,6 +1,6 @@
 # Easy-MLE
 
-This repository provides resources for handful of models for maximum likelihood estimation (MLE). I find that most resources for MLE in R are either: 1) unclear, esoteric, and difficult to implement, or 2) baked into packages which are prone to bugs and lack useful transparency to the underlying math. My goal is to provide a streamlined way to estimate these models, while making transparent and digestible the math that powers them.
+This repository provides resources for a handful of models for maximum likelihood estimation (MLE). I find that most resources for MLE in R are either: 1) unclear, esoteric, and difficult to implement, or 2) baked into packages which are prone to bugs and lack useful transparency to the underlying math. My goal is to provide a streamlined way to estimate these models, while making transparent and digestible the math that powers them.
 
 I cover models for: bivariate outcomes (logit), ordinal outcomes (ordered probit), multinomial outcomes (multinomial logit), and count outcomes (negative binomial). The resources for each topic are organized as follows:
 
